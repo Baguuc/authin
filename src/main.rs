@@ -33,6 +33,7 @@ async fn main() -> Result<()> {
             .app_data(Data::new(pool))
             .service(crate::routes::user::login::login_route)
             .service(crate::routes::user::register::register_route)
+            .service(crate::routes::user::delete::delete_route)
     })
     .bind(("127.0.0.1", port))?
     .run()

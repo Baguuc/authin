@@ -1,18 +1,27 @@
+pub mod functions;
 pub mod error;
 pub mod prelude;
 
 use crate::prelude::*;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     dotenv::dotenv().ok();
 
     let pool = create_pool()
         .await
         .unwrap();
-    let client = pool.get().await.unwrap();
+    let client = pool.get()
+        .await
+        .unwrap();
+
+    crate::functions::user::register(&client, String::from("SomeUser"), String::from("123")).await;
     
-    let _ = clorinde::queries::users::insert_user().bind(&client, &String::from("someuser"), &String::from("123")).await;
+    let jwt_key = dotenv::var("JWT_KEY")?;
+    let token = crate::functions::user::login(&client, String::from("SomeUser"), String::from("123"), jwt_key.clone()).await.unwrap();
+    println!("User: {:?}", crate::functions::user::get_user(&client, token, jwt_key).await.unwrap());
+    
+    return Ok(());
 }
 
 async fn create_pool() -> Result<clorinde::deadpool_postgres::Pool> {

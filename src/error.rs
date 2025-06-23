@@ -19,5 +19,11 @@ pub enum Error {
     CreatePool(#[from] clorinde::deadpool_postgres::CreatePoolError),
 
     #[error(transparent)]
-    Dotenv(#[from] dotenv::Error)
+    Dotenv(#[from] dotenv::Error),
+    
+    #[error(transparent)]
+    JWT(#[from] jsonwebtoken::errors::Error),
+
+    #[error(transparent)]
+    PasswordHash(#[from] argon2::password_hash::Error)
 }

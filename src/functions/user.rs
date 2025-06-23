@@ -6,10 +6,10 @@ pub struct Claims {
     pub exp: usize
 }
 
-pub async fn register(client: &clorinde::deadpool_postgres::Client, login: String, password: String) -> Result<()> { 
+pub async fn register(client: &clorinde::deadpool_postgres::Client, login: &String, password: &String) -> Result<()> { 
     use clorinde::queries::users::insert_user; 
 
-    let pwd = hash_password(password)?;
+    let pwd = hash_password(password.clone())?;
 
     let result = insert_user()
         .bind(client, &login, &pwd)

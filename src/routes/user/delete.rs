@@ -20,8 +20,6 @@ pub async fn delete_route(
         None => return HttpResponse::Unauthorized()
     };
 
-    println!("{}", token);
-
     let user = match get_user(&client, token, var("JWT_KEY").unwrap()).await {
         Ok(user) => user,
         Err(_) => return HttpResponse::BadRequest()

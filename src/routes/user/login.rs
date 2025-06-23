@@ -1,4 +1,4 @@
-#[actix_web::post("/login")]
+#[actix_web::post("/user")]
 pub async fn login_route(
     body: actix_web::web::Json<RequestBody>,
     pool: actix_web::web::Data<clorinde::deadpool_postgres::Pool>

@@ -1,4 +1,4 @@
-#[actix_web::post("/register")]
+#[actix_web::post("/users")]
 pub async fn register_route(
     body: actix_web::web::Json<RequestBody>,
     pool: actix_web::web::Data<clorinde::deadpool_postgres::Pool>

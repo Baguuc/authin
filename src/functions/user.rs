@@ -18,18 +18,18 @@ pub async fn register(client: &clorinde::deadpool_postgres::Client, login: Strin
     return Ok(());
 }
 
-pub async fn login(client: &clorinde::deadpool_postgres::Client, login: String, password: String, encoding_key: String) -> Result<String> {
+pub async fn login(client: &clorinde::deadpool_postgres::Client, login: &String, password: &String, encoding_key: String) -> Result<String> {
     use clorinde::queries::users::retrieve_user; 
     
     // 1. Retrieve user
     // 2. Check pwd
     // 3. Generate jwt
     let user = retrieve_user()
-        .bind(client, &login)
+        .bind(client, login)
         .one()
         .await?;
 
-    if !verify_password(&password, &user.pwd) {
+    if !verify_password(password, &user.pwd) {
         return Err(Error::Generic(String::from("Wrong password")));
     };
     

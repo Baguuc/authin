@@ -1,25 +1,41 @@
-pub mod functions;
 pub mod error;
 pub mod prelude;
+pub mod functions;
+pub mod routes;
 
 use crate::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    dotenv::dotenv().ok();
+    use dotenv::{dotenv,var};
+    use actix_web::{HttpServer, App, web::Data};
+    use futures::executor::block_on;
 
-    let pool = create_pool()
-        .await
-        .unwrap();
-    let client = pool.get()
-        .await
-        .unwrap();
+    dotenv().ok();
 
-    crate::functions::user::register(&client, String::from("SomeUser"), String::from("123")).await;
+    let port: u16 = var("HOST_PORT")?
+        .parse()
+        .unwrap();
+    // these are to make sure env has everything
+    let _ = var("POSTGRES_USER")?;
+    let _ = var("POSTGRES_PASSWORD")?;
+    let _ = var("POSTGRES_HOST")?;
+    let _ = var("POSTGRES_PORT")?;
+    let _ = var("POSTGRES_DATABASE")?;
+    let _ = var("JWT_KEY")?;
+
+    println!("Server listening on port {}", port);
     
-    let jwt_key = dotenv::var("JWT_KEY")?;
-    let token = crate::functions::user::login(&client, String::from("SomeUser"), String::from("123"), jwt_key.clone()).await.unwrap();
-    println!("User: {:?}", crate::functions::user::get_user(&client, token, jwt_key).await.unwrap());
+    HttpServer::new(|| {
+        let pool = block_on(create_pool()).unwrap();
+
+        App::new()
+            .app_data(Data::new(pool))
+            .service(crate::routes::user::login_route)
+    })
+    .bind(("127.0.0.1", port))?
+    .run()
+    .await;
     
     return Ok(());
 }

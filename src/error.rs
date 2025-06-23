@@ -11,4 +11,13 @@ pub enum Error {
     
     #[error(transparent)]
     Actix(#[from] actix_web::Error),
+
+    #[error(transparent)]
+    Query(#[from] clorinde::tokio_postgres::Error),
+
+    #[error(transparent)]
+    CreatePool(#[from] clorinde::deadpool_postgres::CreatePoolError),
+
+    #[error(transparent)]
+    Dotenv(#[from] dotenv::Error)
 }

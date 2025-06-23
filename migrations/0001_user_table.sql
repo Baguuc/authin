@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  login VARCHAR(32) NOT NULL UNIQUE,
+  pwd VARCHAR(80) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS users_login_index ON users USING HASH (login); 
+
+CREATE TYPE TUSER AS (
+  id INTEGER,
+  login VARCHAR(32),
+  pwd VARCHAR(80)
+);

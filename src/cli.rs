@@ -4,17 +4,18 @@ use crate::prelude::*;
 #[command(name = "authin")]
 #[command(bin_name = "authin")]
 pub enum MainCli {
-    Sync
+    Sync,
+    Run
 }
 
 impl MainCli {
     pub fn execute(self) -> Result<()> {
-        use crate::models::{permission::sync_permissions, group::sync_groups};
-        use futures::executor::block_on;
-        use crate::config::Config;
-
         match self {
             Self::Sync => {
+                use crate::models::{permission::sync_permissions, group::sync_groups};
+                use futures::executor::block_on;
+                use crate::config::Config;
+
                 let config = Config::read(String::from("./config.json"))?;
                 let pool = block_on(create_pool(config.database.clone()))?;
                 let client = match block_on(pool.get()) {
@@ -25,6 +26,32 @@ impl MainCli {
                 block_on(sync_permissions(&client, &config.permissions))?;
                 block_on(sync_groups(&client, &config.groups))?;
             },
+            Self::Run => {
+                use actix_web::{HttpServer, App, web::Data};
+                use futures::executor::block_on;
+                use crate::config::Config;
+                
+                let config = Config::read(String::from("./config.json"))?;
+                println!("Server starting on port {}", &config.port);
+                
+                block_on(
+                    HttpServer::new(|| {
+                        let config = Config::read(String::from("./config.json")).unwrap();
+                        let pool = block_on(create_pool(config.database.clone())).unwrap();
+                        
+                        App::new()
+                            .app_data(Data::new(pool))
+                            .app_data(Data::new(config.clone()))
+                            .service(crate::routes::user::login::login_route)
+                            .service(crate::routes::user::register::register_route)
+                            .service(crate::routes::user::delete::delete_route)
+                            .service(crate::routes::user::info::info_route)
+                            .service(crate::routes::user::authorize::authorize_route)
+                    })
+                    .bind(("127.0.0.1", config.port))?
+                    .run()
+                );
+            }
         };
 
         return Ok(());

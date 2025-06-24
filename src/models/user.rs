@@ -1,9 +1,10 @@
 use crate::prelude::*;
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct Claims {
-    pub sub: String,
-    pub exp: usize
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct User {
+    pub id: i32,
+    pub login: String,
+    pub pwd: String
 }
 
 pub async fn register(client: &clorinde::deadpool_postgres::Client, login: &String, password: &String) -> Result<()> { 
@@ -21,9 +22,6 @@ pub async fn register(client: &clorinde::deadpool_postgres::Client, login: &Stri
 pub async fn login(client: &clorinde::deadpool_postgres::Client, login: &String, password: &String, encoding_key: String) -> Result<String> {
     use clorinde::queries::users::retrieve_user; 
     
-    // 1. Retrieve user
-    // 2. Check pwd
-    // 3. Generate jwt
     let user = retrieve_user()
         .bind(client, login)
         .one()
@@ -42,14 +40,14 @@ pub async fn login(client: &clorinde::deadpool_postgres::Client, login: &String,
     return Ok(token);
 }
 
-pub async fn get_user(client: &clorinde::deadpool_postgres::Client, token: String, encoding_key: String) -> Result<clorinde::queries::users::RetrieveUser> {
+pub async fn get_user(client: &clorinde::deadpool_postgres::Client, token: String, encoding_key: String) -> Result<User> {
     let claims = get_claims(token, encoding_key)?;
     let user = clorinde::queries::users::retrieve_user()
         .bind(client, &claims.sub)
         .one()
         .await?;
     
-    return Ok(user);
+    return Ok(User { id: user.id, login: user.login, pwd: user.pwd });
 }
 
 fn hash_password(password: String) -> Result<String> {
@@ -77,6 +75,12 @@ fn verify_password(password: &String, password_hash: &String) -> bool {
         Ok(_) => return true,
         Err(_) => return false
     };
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct Claims {
+    pub sub: String,
+    pub exp: usize
 }
 
 fn generate_jwt(login: String, expires: usize, key: String) -> Result<String> {

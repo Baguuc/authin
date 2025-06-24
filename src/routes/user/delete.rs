@@ -5,7 +5,7 @@ pub async fn delete_route(
     pool: actix_web::web::Data<clorinde::deadpool_postgres::Pool>
 ) -> impl actix_web::Responder {
     use clorinde::queries::users::delete_user;
-    use crate::functions::user::get_user;
+    use crate::models::user::get_user;
     use actix_web::HttpResponse;
     use dotenv::var;
     

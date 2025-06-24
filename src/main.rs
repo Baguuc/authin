@@ -1,6 +1,6 @@
 pub mod error;
 pub mod prelude;
-pub mod functions;
+pub mod models;
 pub mod routes;
 
 use crate::prelude::*;

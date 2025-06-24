@@ -3,7 +3,7 @@ pub async fn register_route(
     body: actix_web::web::Json<RequestBody>,
     pool: actix_web::web::Data<clorinde::deadpool_postgres::Pool>
 ) -> impl actix_web::Responder {
-    use crate::functions::user::register;
+    use crate::models::user::register;
     use actix_web::HttpResponse;
     use dotenv::var;
     

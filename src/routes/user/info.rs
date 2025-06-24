@@ -3,7 +3,7 @@ pub async fn info_route(
     req: actix_web::HttpRequest,
     pool: actix_web::web::Data<clorinde::deadpool_postgres::Pool>
 ) -> impl actix_web::Responder {
-    use crate::functions::user::get_user;
+    use crate::models::user::get_user;
     use actix_web::{HttpResponse, http::header::ContentType};
     use dotenv::var;
     use serde_json::to_string;
@@ -26,12 +26,5 @@ pub async fn info_route(
 
     return HttpResponse::Ok()
         .content_type(ContentType::json())
-        .body(to_string(&ResponseBody{ id: user.id, login: user.login, pwd: user.pwd }).unwrap());
-}
-
-#[derive(serde::Serialize)]
-struct ResponseBody {
-    id: i32,
-    login: String,
-    pwd: String
+        .body(to_string(&user).unwrap());
 }

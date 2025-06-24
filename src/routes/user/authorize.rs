@@ -5,7 +5,7 @@ pub async fn authorize_route(
     pool: actix_web::web::Data<clorinde::deadpool_postgres::Pool>
 ) -> impl actix_web::Responder {
     use clorinde::queries::users::retrieve_user_permission;
-    use crate::functions::user::get_user;
+    use crate::models::user::get_user;
     use actix_web::{HttpResponse, http::header::ContentType};
     use dotenv::var;
     use serde_json::to_string;

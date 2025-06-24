@@ -2,10 +2,35 @@
 INSERT INTO groups (name) VALUES (:name);
 
 --! retrieve_group
-SELECT name FROM groups WHERE name = :name;
+SELECT 
+  g.name,
+  ARRAY_REMOVE(ARRAY_AGG(gp.permission_name), NULL) AS permissions
+FROM 
+  groups g
+INNER JOIN
+  group_permissions gp
+  ON
+  gp.group_name = g.name
+WHERE
+  name = :group_name
+GROUP BY
+  g.name
+;
+
 
 --! list_groups
-SELECT name FROM groups;
+SELECT 
+  g.name,
+  ARRAY_REMOVE(ARRAY_AGG(gp.permission_name), NULL) AS permissions
+FROM 
+  groups g
+INNER JOIN 
+  group_permissions gp 
+  ON 
+  gp.group_name = g.name
+GROUP BY
+  g.name
+;
 
 --! delete_group
 DELETE FROM groups WHERE name = :name;

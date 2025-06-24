@@ -32,7 +32,30 @@ async fn main() -> Result<()> {
         &vec![ 
             String::from("all:read"),
             String::from("all:write"),
-            String::from("less:read")
+            String::from("less:read"),
+            String::from("less:write")
+        ]
+    )
+    .await?;
+    
+    crate::models::group::sync_groups(
+        &pool.get().await.unwrap(),
+        // sample data 
+        &vec![ 
+            crate::models::group::Group {
+                name: String::from("admin"), 
+                permissions: vec![ 
+                    String::from("all:read"),
+                    String::from("all:write")
+                ]
+            },
+            crate::models::group::Group {
+                name: String::from("moderator"), 
+                permissions: vec![ 
+                    String::from("less:read"),
+                    String::from("less:write")
+                ]
+            }
         ]
     )
     .await?;

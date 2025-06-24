@@ -4,6 +4,9 @@ INSERT INTO permissions (name) VALUES (:name);
 --! retrieve_permission
 SELECT name FROM permissions WHERE name = :name;
 
+--! list_permissions
+SELECT name FROM permissions;
+
 --! delete_permission
 DELETE FROM permissions WHERE name = :name;
 

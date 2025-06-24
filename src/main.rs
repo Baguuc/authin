@@ -23,7 +23,21 @@ async fn main() -> Result<()> {
     let _ = var("POSTGRES_PORT")?;
     let _ = var("POSTGRES_DATABASE")?;
     let _ = var("JWT_KEY")?;
+    
+    let pool = create_pool().await.unwrap();
 
+    crate::models::permission::sync_permissions(
+        &pool.get().await.unwrap(),
+        // sample data 
+        &vec![ 
+            String::from("all:read"),
+            String::from("all:write"),
+            String::from("less:read")
+        ]
+    )
+    .await?;
+    
+    /*
     println!("Server listening on port {}", port);
     
     HttpServer::new(|| {
@@ -40,7 +54,7 @@ async fn main() -> Result<()> {
     .bind(("127.0.0.1", port))?
     .run()
     .await;
-    
+    */    
     return Ok(());
 }
 

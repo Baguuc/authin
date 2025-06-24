@@ -110,6 +110,24 @@ impl RetrieveGroupStmt {
         }
     }
 }
+pub fn list_groups() -> ListGroupsStmt {
+    ListGroupsStmt(crate::client::async_::Stmt::new("SELECT name FROM groups"))
+}
+pub struct ListGroupsStmt(crate::client::async_::Stmt);
+impl ListGroupsStmt {
+    pub fn bind<'c, 'a, 's, C: GenericClient>(
+        &'s mut self,
+        client: &'c C,
+    ) -> StringQuery<'c, 'a, 's, C, String, 0> {
+        StringQuery {
+            client,
+            params: [],
+            stmt: &mut self.0,
+            extractor: |row| Ok(row.try_get(0)?),
+            mapper: |it| it.into(),
+        }
+    }
+}
 pub fn delete_group() -> DeleteGroupStmt {
     DeleteGroupStmt(crate::client::async_::Stmt::new(
         "DELETE FROM groups WHERE name = $1",

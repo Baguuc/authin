@@ -4,6 +4,9 @@ INSERT INTO groups (name) VALUES (:name);
 --! retrieve_group
 SELECT name FROM groups WHERE name = :name;
 
+--! list_groups
+SELECT name FROM groups;
+
 --! delete_group
 DELETE FROM groups WHERE name = :name;
 

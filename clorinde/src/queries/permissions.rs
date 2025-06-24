@@ -110,6 +110,26 @@ impl RetrievePermissionStmt {
         }
     }
 }
+pub fn list_permissions() -> ListPermissionsStmt {
+    ListPermissionsStmt(crate::client::async_::Stmt::new(
+        "SELECT name FROM permissions",
+    ))
+}
+pub struct ListPermissionsStmt(crate::client::async_::Stmt);
+impl ListPermissionsStmt {
+    pub fn bind<'c, 'a, 's, C: GenericClient>(
+        &'s mut self,
+        client: &'c C,
+    ) -> StringQuery<'c, 'a, 's, C, String, 0> {
+        StringQuery {
+            client,
+            params: [],
+            stmt: &mut self.0,
+            extractor: |row| Ok(row.try_get(0)?),
+            mapper: |it| it.into(),
+        }
+    }
+}
 pub fn delete_permission() -> DeletePermissionStmt {
     DeletePermissionStmt(crate::client::async_::Stmt::new(
         "DELETE FROM permissions WHERE name = $1",

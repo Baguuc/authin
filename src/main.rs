@@ -3,11 +3,14 @@ pub mod prelude;
 pub mod models;
 pub mod routes;
 pub mod config;
+pub mod cli;
 
 use crate::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    use clap::Parser;
+    /*
     use actix_web::{HttpServer, App, web::Data};
     use futures::executor::block_on;
     use crate::config::Config;
@@ -33,6 +36,10 @@ async fn main() -> Result<()> {
     .bind(("127.0.0.1", config.port.clone()))?
     .run()
     .await;
+    */
+
+    let cli = crate::cli::MainCli::parse();
+    cli.execute();
 
     return Ok(());
 }

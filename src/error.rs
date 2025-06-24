@@ -16,11 +16,14 @@ pub enum Error {
     Query(#[from] clorinde::tokio_postgres::Error),
 
     #[error(transparent)]
-    CreatePool(#[from] clorinde::deadpool_postgres::CreatePoolError),
-    
+    CreatePostgresPool(#[from] clorinde::deadpool_postgres::CreatePoolError),
+        
     #[error(transparent)]
     JWT(#[from] jsonwebtoken::errors::Error),
 
     #[error(transparent)]
-    PasswordHash(#[from] argon2::password_hash::Error)
+    PasswordHash(#[from] argon2::password_hash::Error),
+    
+    #[error(transparent)]
+    Clap(#[from] clap::Error)
 }

@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone, Debug)]
 pub struct Group {
     pub name: String,
     pub permissions: Vec<String>

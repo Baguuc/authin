@@ -4,7 +4,9 @@ use crate::prelude::*;
 pub struct Config {
     pub port: u16,
     pub database: DatabaseConfig,
-    pub jwt: JWTConfig
+    pub jwt: JWTConfig,
+    pub permissions: Vec<String>,
+    pub groups: Vec<crate::models::group::Group>
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]

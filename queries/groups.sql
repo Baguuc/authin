@@ -7,7 +7,7 @@ SELECT
   ARRAY_REMOVE(ARRAY_AGG(gp.permission_name), NULL) AS permissions
 FROM 
   groups g
-INNER JOIN
+LEFT JOIN
   group_permissions gp
   ON
   gp.group_name = g.name
@@ -24,7 +24,7 @@ SELECT
   ARRAY_REMOVE(ARRAY_AGG(gp.permission_name), NULL) AS permissions
 FROM 
   groups g
-INNER JOIN 
+LEFT JOIN 
   group_permissions gp 
   ON 
   gp.group_name = g.name

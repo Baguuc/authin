@@ -192,7 +192,7 @@ impl InsertGroupStmt {
 }
 pub fn retrieve_group() -> RetrieveGroupStmt {
     RetrieveGroupStmt(crate::client::async_::Stmt::new(
-        "SELECT g.name, ARRAY_REMOVE(ARRAY_AGG(gp.permission_name), NULL) AS permissions FROM groups g INNER JOIN group_permissions gp ON gp.group_name = g.name WHERE name = $1 GROUP BY g.name",
+        "SELECT g.name, ARRAY_REMOVE(ARRAY_AGG(gp.permission_name), NULL) AS permissions FROM groups g LEFT JOIN group_permissions gp ON gp.group_name = g.name WHERE name = $1 GROUP BY g.name",
     ))
 }
 pub struct RetrieveGroupStmt(crate::client::async_::Stmt);
@@ -219,7 +219,7 @@ impl RetrieveGroupStmt {
 }
 pub fn list_groups() -> ListGroupsStmt {
     ListGroupsStmt(crate::client::async_::Stmt::new(
-        "SELECT g.name, ARRAY_REMOVE(ARRAY_AGG(gp.permission_name), NULL) AS permissions FROM groups g INNER JOIN group_permissions gp ON gp.group_name = g.name GROUP BY g.name",
+        "SELECT g.name, ARRAY_REMOVE(ARRAY_AGG(gp.permission_name), NULL) AS permissions FROM groups g LEFT JOIN group_permissions gp ON gp.group_name = g.name GROUP BY g.name",
     ))
 }
 pub struct ListGroupsStmt(crate::client::async_::Stmt);

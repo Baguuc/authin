@@ -9,6 +9,10 @@ pub enum MainCli {
     Grant {
         object: String,
         subject: String
+    },
+    Revoke {
+        object: String,
+        subject: String
     }
 }
 
@@ -66,6 +70,17 @@ impl MainCli {
                 let client = block_on(pool.get()).unwrap();
 
                 block_on(grant_group().bind(&client, &subject, &object));
+            },
+            Self::Revoke { subject, object } => {
+                use clorinde::queries::groups::revoke_group;
+                use futures::executor::block_on;
+                use crate::config::Config;
+                
+                let config = Config::read(String::from("./config.json")).unwrap();
+                let pool = block_on(create_pool(config.database.clone())).unwrap();
+                let client = block_on(pool.get()).unwrap();
+
+                block_on(revoke_group().bind(&client, &subject, &object));
             }
         };
 

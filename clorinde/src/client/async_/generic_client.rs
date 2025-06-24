@@ -2,7 +2,7 @@
 
 use std::future::Future;
 use tokio_postgres::{
-    types::BorrowToSql, Client, Error, RowStream, Statement, ToStatement, Transaction,
+    Client, Error, RowStream, Statement, ToStatement, Transaction, types::BorrowToSql,
 };
 /// Abstraction over multiple types of asynchronous clients.
 /// This allows you to use tokio_postgres clients and transactions interchangeably.
@@ -10,10 +10,7 @@ use tokio_postgres::{
 /// In addition, when the `deadpool` feature is enabled (default), this trait also
 /// abstracts over deadpool clients and transactions
 pub trait GenericClient: Send + Sync {
-    fn prepare(
-        &self,
-        query: &str,
-    ) -> impl Future<Output = Result<Statement, Error>> + Send;
+    fn prepare(&self, query: &str) -> impl Future<Output = Result<Statement, Error>> + Send;
     fn execute<T>(
         &self,
         query: &T,

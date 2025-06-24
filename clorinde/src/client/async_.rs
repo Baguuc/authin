@@ -19,7 +19,10 @@ pub struct Stmt {
 impl Stmt {
     #[must_use]
     pub fn new(query: &'static str) -> Self {
-        Self { query, cached: None }
+        Self {
+            query,
+            cached: None,
+        }
     }
     pub async fn prepare<'a, C: GenericClient>(
         &'a mut self,

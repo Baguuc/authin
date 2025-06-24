@@ -1,13 +1,13 @@
 // This file was generated with `clorinde`. Do not modify.
 
+use super::generic_client::GenericClient;
 use deadpool_postgres::{
     Client as DeadpoolClient, ClientWrapper, Transaction as DeadpoolTransaction,
 };
 use tokio_postgres::{
-    types::BorrowToSql, Client as PgClient, Error, RowStream, Statement, ToStatement,
-    Transaction as PgTransaction,
+    Client as PgClient, Error, RowStream, Statement, ToStatement, Transaction as PgTransaction,
+    types::BorrowToSql,
 };
-use super::generic_client::GenericClient;
 impl GenericClient for DeadpoolClient {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
         ClientWrapper::prepare_cached(self, query).await

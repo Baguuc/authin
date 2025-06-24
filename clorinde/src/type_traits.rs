@@ -1,9 +1,9 @@
 // This file was generated with `clorinde`. Do not modify.
 
-use std::borrow::Cow;
 use super::domain::escape_domain_to_sql;
 use postgres_protocol::types::{self, ArrayDimension};
-use postgres_types::{private::BytesMut, to_sql_checked, IsNull, Kind, ToSql, Type};
+use postgres_types::{IsNull, Kind, ToSql, Type, private::BytesMut, to_sql_checked};
+use std::borrow::Cow;
 pub trait StringSql: std::fmt::Debug + ToSql + Sync {}
 impl<T: StringSql> StringSql for &T {}
 impl StringSql for String {}
@@ -56,7 +56,8 @@ impl<
     T: std::fmt::Debug + ToSql + Send + Sync,
     I: Iterator<Item = T> + ExactSizeIterator,
     F: Fn() -> I + Send + Sync,
-> ArraySql for IterSql<T, I, F> {
+> ArraySql for IterSql<T, I, F>
+{
     type Item = T;
     fn escape_domain_to_sql(
         &self,
@@ -66,24 +67,17 @@ impl<
         escape_domain_to_sql(ty, w, (self.0)())
     }
 }
-pub struct IterSql<
-    T: ToSql,
-    I: Iterator<Item = T> + ExactSizeIterator,
-    F: Fn() -> I + Sync,
->(
-    pub F,
-);
-impl<
-    T: ToSql,
-    I: Iterator<Item = T> + ExactSizeIterator,
-    F: Fn() -> I + Sync,
-> std::fmt::Debug for IterSql<T, I, F> {
+pub struct IterSql<T: ToSql, I: Iterator<Item = T> + ExactSizeIterator, F: Fn() -> I + Sync>(pub F);
+impl<T: ToSql, I: Iterator<Item = T> + ExactSizeIterator, F: Fn() -> I + Sync> std::fmt::Debug
+    for IterSql<T, I, F>
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("ArrayFn").finish()
     }
 }
 impl<T: ToSql, I: Iterator<Item = T> + ExactSizeIterator, F: Fn() -> I + Sync> ToSql
-for IterSql<T, I, F> {
+    for IterSql<T, I, F>
+{
     fn to_sql(
         &self,
         ty: &Type,

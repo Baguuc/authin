@@ -5,7 +5,11 @@ use crate::prelude::*;
 #[command(bin_name = "authin")]
 pub enum MainCli {
     Sync,
-    Run
+    Run,
+    Grant {
+        object: String,
+        subject: String
+    }
 }
 
 impl MainCli {
@@ -51,6 +55,17 @@ impl MainCli {
                     .bind(("127.0.0.1", config.port))?
                     .run()
                 );
+            },
+            Self::Grant { subject, object } => {
+                use clorinde::queries::groups::grant_group;
+                use futures::executor::block_on;
+                use crate::config::Config;
+                
+                let config = Config::read(String::from("./config.json")).unwrap();
+                let pool = block_on(create_pool(config.database.clone())).unwrap();
+                let client = block_on(pool.get()).unwrap();
+
+                block_on(grant_group().bind(&client, &subject, &object));
             }
         };
 

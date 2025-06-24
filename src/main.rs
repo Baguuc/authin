@@ -35,6 +35,7 @@ async fn main() -> Result<()> {
             .service(crate::routes::user::register::register_route)
             .service(crate::routes::user::delete::delete_route)
             .service(crate::routes::user::info::info_route)
+            .service(crate::routes::user::authorize::authorize_route)
     })
     .bind(("127.0.0.1", port))?
     .run()

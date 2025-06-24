@@ -1,8 +1,10 @@
-#[actix_web::get("/user")]
-pub async fn info_route(
+#[actix_web::get("/authorize/{permission_name}")]
+pub async fn authorize_route(
     req: actix_web::HttpRequest,
+    path: actix_web::web::Path<RequestPath>,
     pool: actix_web::web::Data<clorinde::deadpool_postgres::Pool>
 ) -> impl actix_web::Responder {
+    use clorinde::queries::users::retrieve_user_permission;
     use crate::functions::user::get_user;
     use actix_web::{HttpResponse, http::header::ContentType};
     use dotenv::var;
@@ -18,20 +20,20 @@ pub async fn info_route(
         Some(token) => token.to_str().unwrap().to_string(),
         None => return HttpResponse::Unauthorized().body("")
     };
+    let jwt_key = var("JWT_KEY").unwrap();
 
-    let user = match get_user(&client, token, var("JWT_KEY").unwrap()).await {
+    let user = match get_user(&client, token, jwt_key).await {
         Ok(user) => user,
         Err(_) => return HttpResponse::BadRequest().body("")
     };
 
-    return HttpResponse::Ok()
-        .content_type(ContentType::json())
-        .body(to_string(&ResponseBody{ id: user.id, login: user.login, pwd: user.pwd }).unwrap());
+    match retrieve_user_permission().bind(&client, &user.login, &path.permission_name).one().await {
+        Ok(_) => return HttpResponse::Ok().body(""),
+        Err(_) => return HttpResponse::Unauthorized().body("")
+    };
 }
 
-#[derive(serde::Serialize)]
-struct ResponseBody {
-    id: i32,
-    login: String,
-    pwd: String
+#[derive(serde::Deserialize)]
+struct RequestPath {
+    permission_name: String
 }

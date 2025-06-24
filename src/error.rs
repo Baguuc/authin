@@ -7,7 +7,7 @@ pub enum Error {
     IO(#[from] std::io::Error),
     
     #[error("Serde {0}")]
-    Serde(String),
+    Serde(#[from] serde_json::Error),
     
     #[error(transparent)]
     Actix(#[from] actix_web::Error),
@@ -17,9 +17,6 @@ pub enum Error {
 
     #[error(transparent)]
     CreatePool(#[from] clorinde::deadpool_postgres::CreatePoolError),
-
-    #[error(transparent)]
-    Dotenv(#[from] dotenv::Error),
     
     #[error(transparent)]
     JWT(#[from] jsonwebtoken::errors::Error),

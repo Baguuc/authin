@@ -2,101 +2,49 @@ pub mod error;
 pub mod prelude;
 pub mod models;
 pub mod routes;
+pub mod config;
 
 use crate::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    use dotenv::{dotenv,var};
     use actix_web::{HttpServer, App, web::Data};
     use futures::executor::block_on;
-
-    dotenv().ok();
-
-    let port: u16 = var("HOST_PORT")?
-        .parse()
-        .unwrap();
-    // these are to make sure env has everything
-    let _ = var("POSTGRES_USER")?;
-    let _ = var("POSTGRES_PASSWORD")?;
-    let _ = var("POSTGRES_HOST")?;
-    let _ = var("POSTGRES_PORT")?;
-    let _ = var("POSTGRES_DATABASE")?;
-    let _ = var("JWT_KEY")?;
+    use crate::config::Config;
     
-    let pool = create_pool().await.unwrap();
-
-    crate::models::permission::sync_permissions(
-        &pool.get().await.unwrap(),
-        // sample data 
-        &vec![ 
-            String::from("all:read"),
-            String::from("all:write"),
-            String::from("less:read"),
-            String::from("less:write")
-        ]
-    )
-    .await?;
-    
-    crate::models::group::sync_groups(
-        &pool.get().await.unwrap(),
-        // sample data 
-        &vec![ 
-            crate::models::group::Group {
-                name: String::from("admin"), 
-                permissions: vec![ 
-                    String::from("all:read"),
-                    String::from("all:write")
-                ]
-            },
-            crate::models::group::Group {
-                name: String::from("moderator"), 
-                permissions: vec![ 
-                    String::from("less:read"),
-                    String::from("less:write")
-                ]
-            }
-        ]
-    )
-    .await?;
-    
-    /*
-    println!("Server listening on port {}", port);
+    let config = Config::read(String::from("./config.json"))?;
+ 
+    println!("Server listening on port {}", config.port);
     
     HttpServer::new(|| {
-        let pool = block_on(create_pool()).unwrap();
+        // i will not fight the borrow checker for 0.5s speed gain parsing the config :|
+        let config = Config::read(String::from("./config.json")).unwrap();
+        let pool = block_on(create_pool(config.database.clone())).unwrap();
 
         App::new()
             .app_data(Data::new(pool))
+            .app_data(Data::new(config.clone()))
             .service(crate::routes::user::login::login_route)
             .service(crate::routes::user::register::register_route)
             .service(crate::routes::user::delete::delete_route)
             .service(crate::routes::user::info::info_route)
             .service(crate::routes::user::authorize::authorize_route)
     })
-    .bind(("127.0.0.1", port))?
+    .bind(("127.0.0.1", config.port.clone()))?
     .run()
     .await;
-    */    
+
     return Ok(());
 }
 
-async fn create_pool() -> Result<clorinde::deadpool_postgres::Pool> {
+async fn create_pool(config: crate::config::DatabaseConfig) -> Result<clorinde::deadpool_postgres::Pool> {
     let mut cfg = clorinde::deadpool_postgres::Config::new();
-
-    let username = dotenv::var("POSTGRES_USER")?;
-    let password = dotenv::var("POSTGRES_PASSWORD")?;
-    let host = dotenv::var("POSTGRES_HOST")?;
-    let port: u16 = dotenv::var("POSTGRES_PORT")?
-        .parse()
-        .unwrap_or(5432);
-    let database_name = dotenv::var("POSTGRES_DATABASE")?;
     
-    cfg.user = Some(username);
-    cfg.password = Some(password);
-    cfg.host = Some(host);
-    cfg.port = Some(port);
-    cfg.dbname = Some(database_name);
+    cfg.user = Some(config.user);
+    cfg.password = Some(config.password);
+    cfg.host = Some(config.host);
+    cfg.port = Some(config.port);
+    cfg.dbname = Some(config.database);
 
     return Ok(cfg.create_pool(
         Some(clorinde::deadpool_postgres::Runtime::Tokio1),

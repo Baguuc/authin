@@ -1,11 +1,11 @@
 #[actix_web::get("/user")]
 pub async fn info_route(
     req: actix_web::HttpRequest,
-    pool: actix_web::web::Data<clorinde::deadpool_postgres::Pool>
+    pool: actix_web::web::Data<clorinde::deadpool_postgres::Pool>,
+    config: actix_web::web::Data<crate::config::Config>,
 ) -> impl actix_web::Responder {
     use crate::models::user::get_user;
     use actix_web::{HttpResponse, http::header::ContentType};
-    use dotenv::var;
     use serde_json::to_string;
     
     let client = match pool.get().await {
@@ -19,7 +19,7 @@ pub async fn info_route(
         None => return HttpResponse::Unauthorized().body("")
     };
 
-    let user = match get_user(&client, token, var("JWT_KEY").unwrap()).await {
+    let user = match get_user(&client, token, config.jwt.encryption_key.clone()).await {
         Ok(user) => user,
         Err(_) => return HttpResponse::BadRequest().body("")
     };

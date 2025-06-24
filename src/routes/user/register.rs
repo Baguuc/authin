@@ -5,7 +5,6 @@ pub async fn register_route(
 ) -> impl actix_web::Responder {
     use crate::models::user::register;
     use actix_web::HttpResponse;
-    use dotenv::var;
     
     let client = match pool.get().await {
         Ok(client) => client,

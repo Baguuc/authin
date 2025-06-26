@@ -6,7 +6,8 @@ pub struct Config {
     pub database: DatabaseConfig,
     pub jwt: JWTConfig,
     pub permissions: Vec<String>,
-    pub groups: Vec<crate::models::group::Group>
+    pub groups: Vec<crate::models::group::Group>,
+    pub users: Vec<UserConfig>
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
@@ -21,6 +22,12 @@ pub struct DatabaseConfig {
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct JWTConfig {
     pub encryption_key: String
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+pub struct UserConfig {
+    pub login: String,
+    pub groups: Vec<String>
 }
 
 impl Config {

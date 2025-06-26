@@ -50,6 +50,83 @@ pub async fn get_user(client: &clorinde::deadpool_postgres::Client, token: Strin
     return Ok(User { id: user.id, login: user.login, pwd: user.pwd });
 }
 
+pub async fn sync_users(client: &clorinde::deadpool_postgres::Client, new_users: &Vec<crate::config::UserConfig>) -> Result<()> {
+    use clorinde::queries::{groups::{grant_group, revoke_group}, users::{list_users, insert_user_no_pwd, delete_user}};
+    use crate::config::UserConfig as User;
+    
+    let current_users = list_users()
+        .bind(client)
+        .all()
+        .await?
+        .iter()
+        .map(|g| User { 
+            login: g.login.clone(),
+            groups: g.groups.clone()
+        })
+        .collect::<Vec<User>>();
+
+    for user in &current_users {
+        let mut found = false;
+        
+        for n_user in new_users {
+            if user.login == n_user.login { 
+                found = true;
+                break;
+            }
+        }
+
+        if !found {
+            let _ = delete_user()
+                .bind(client, &user.login)
+                .await?;
+        }
+    }
+
+    for user in new_users {
+        let mut found = false;
+        
+        for c_user in &current_users {
+            if user.login == c_user.login {
+                // only users do not match
+                found = true;
+
+                if user.groups == c_user.groups {
+                    break;
+                }
+
+                for group in &c_user.groups {                     
+                    revoke_group()
+                        .bind(client, &c_user.login, &group)
+                        .await;
+                }
+                
+                for group in &user.groups {                     
+                    grant_group()
+                        .bind(client, &user.login, &group)
+                        .await;
+                }
+                
+                break;
+            } 
+        }
+
+        if found { continue; }
+        
+        // if couldn't be found just add it from scratch
+        insert_user_no_pwd()
+            .bind(client, &user.login)
+            .await?;
+
+        for group in &user.groups {
+            grant_group()
+                .bind(client, &user.login, &group)
+                .await?;
+        }
+    }
+    
+    return Ok(());
+}
+
 fn hash_password(password: String) -> Result<String> {
     use argon2::{Argon2, PasswordHasher, password_hash::{SaltString, rand_core::OsRng}};
     

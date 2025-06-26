@@ -20,7 +20,7 @@ impl MainCli {
     pub fn execute(self) -> Result<()> {
         match self {
             Self::Sync => {
-                use crate::models::{permission::sync_permissions, group::sync_groups};
+                use crate::models::{permission::sync_permissions, group::sync_groups, user::sync_users};
                 use futures::executor::block_on;
                 use crate::config::Config;
 
@@ -33,6 +33,7 @@ impl MainCli {
                 
                 block_on(sync_permissions(&client, &config.permissions))?;
                 block_on(sync_groups(&client, &config.groups))?;
+                block_on(sync_users(&client, &config.users))?;
             },
             Self::Run => {
                 use actix_web::{HttpServer, App, web::Data};

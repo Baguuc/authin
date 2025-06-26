@@ -30,6 +30,23 @@ impl<'a> From<RetrieveUserBorrowed<'a>> for RetrieveUser {
         }
     }
 }
+#[derive(Debug, Clone, PartialEq)]
+pub struct ListUsers {
+    pub login: String,
+    pub groups: Vec<String>,
+}
+pub struct ListUsersBorrowed<'a> {
+    pub login: &'a str,
+    pub groups: crate::ArrayIterator<'a, &'a str>,
+}
+impl<'a> From<ListUsersBorrowed<'a>> for ListUsers {
+    fn from(ListUsersBorrowed { login, groups }: ListUsersBorrowed<'a>) -> Self {
+        Self {
+            login: login.into(),
+            groups: groups.map(|v| v.into()).collect(),
+        }
+    }
+}
 use crate::client::async_::GenericClient;
 use futures::{self, StreamExt, TryStreamExt};
 pub struct RetrieveUserQuery<'c, 'a, 's, C: GenericClient, T, const N: usize> {
@@ -48,6 +65,67 @@ where
         mapper: fn(RetrieveUserBorrowed) -> R,
     ) -> RetrieveUserQuery<'c, 'a, 's, C, R, N> {
         RetrieveUserQuery {
+            client: self.client,
+            params: self.params,
+            stmt: self.stmt,
+            extractor: self.extractor,
+            mapper,
+        }
+    }
+    pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+        let stmt = self.stmt.prepare(self.client).await?;
+        let row = self.client.query_one(stmt, &self.params).await?;
+        Ok((self.mapper)((self.extractor)(&row)?))
+    }
+    pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
+        self.iter().await?.try_collect().await
+    }
+    pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+        let stmt = self.stmt.prepare(self.client).await?;
+        Ok(self
+            .client
+            .query_opt(stmt, &self.params)
+            .await?
+            .map(|row| {
+                let extracted = (self.extractor)(&row)?;
+                Ok((self.mapper)(extracted))
+            })
+            .transpose()?)
+    }
+    pub async fn iter(
+        self,
+    ) -> Result<
+        impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'c,
+        tokio_postgres::Error,
+    > {
+        let stmt = self.stmt.prepare(self.client).await?;
+        let it = self
+            .client
+            .query_raw(stmt, crate::slice_iter(&self.params))
+            .await?
+            .map(move |res| {
+                res.and_then(|row| {
+                    let extracted = (self.extractor)(&row)?;
+                    Ok((self.mapper)(extracted))
+                })
+            })
+            .into_stream();
+        Ok(it)
+    }
+}
+pub struct ListUsersQuery<'c, 'a, 's, C: GenericClient, T, const N: usize> {
+    client: &'c C,
+    params: [&'a (dyn postgres_types::ToSql + Sync); N],
+    stmt: &'s mut crate::client::async_::Stmt,
+    extractor: fn(&tokio_postgres::Row) -> Result<ListUsersBorrowed, tokio_postgres::Error>,
+    mapper: fn(ListUsersBorrowed) -> T,
+}
+impl<'c, 'a, 's, C, T: 'c, const N: usize> ListUsersQuery<'c, 'a, 's, C, T, N>
+where
+    C: GenericClient,
+{
+    pub fn map<R>(self, mapper: fn(ListUsersBorrowed) -> R) -> ListUsersQuery<'c, 'a, 's, C, R, N> {
+        ListUsersQuery {
             client: self.client,
             params: self.params,
             stmt: self.stmt,
@@ -196,6 +274,22 @@ impl<'a, C: GenericClient + Send + Sync, T1: crate::StringSql, T2: crate::String
         Box::pin(self.bind(client, &params.login, &params.pwd))
     }
 }
+pub fn insert_user_no_pwd() -> InsertUserNoPwdStmt {
+    InsertUserNoPwdStmt(crate::client::async_::Stmt::new(
+        "INSERT INTO users (login, pwd) VALUES ($1, '')",
+    ))
+}
+pub struct InsertUserNoPwdStmt(crate::client::async_::Stmt);
+impl InsertUserNoPwdStmt {
+    pub async fn bind<'c, 'a, 's, C: GenericClient, T1: crate::StringSql>(
+        &'s mut self,
+        client: &'c C,
+        login: &'a T1,
+    ) -> Result<u64, tokio_postgres::Error> {
+        let stmt = self.0.prepare(client).await?;
+        client.execute(stmt, &[login]).await
+    }
+}
 pub fn retrieve_user() -> RetrieveUserStmt {
     RetrieveUserStmt(crate::client::async_::Stmt::new(
         "SELECT id, login, pwd FROM users WHERE login = $1",
@@ -221,6 +315,32 @@ impl RetrieveUserStmt {
                     })
                 },
             mapper: |it| RetrieveUser::from(it),
+        }
+    }
+}
+pub fn list_users() -> ListUsersStmt {
+    ListUsersStmt(crate::client::async_::Stmt::new(
+        "SELECT u.login, ARRAY_REMOVE(ARRAY_AGG(ug.group_name), NULL) AS groups FROM users u LEFT JOIN user_groups ug ON ug.user_login = u.login GROUP BY u.login",
+    ))
+}
+pub struct ListUsersStmt(crate::client::async_::Stmt);
+impl ListUsersStmt {
+    pub fn bind<'c, 'a, 's, C: GenericClient>(
+        &'s mut self,
+        client: &'c C,
+    ) -> ListUsersQuery<'c, 'a, 's, C, ListUsers, 0> {
+        ListUsersQuery {
+            client,
+            params: [],
+            stmt: &mut self.0,
+            extractor:
+                |row: &tokio_postgres::Row| -> Result<ListUsersBorrowed, tokio_postgres::Error> {
+                    Ok(ListUsersBorrowed {
+                        login: row.try_get(0)?,
+                        groups: row.try_get(1)?,
+                    })
+                },
+            mapper: |it| ListUsers::from(it),
         }
     }
 }

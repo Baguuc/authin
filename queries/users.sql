@@ -1,8 +1,25 @@
 --! insert_user
 INSERT INTO users (login, pwd) VALUES (:login, :pwd);
 
+--! insert_user_no_pwd
+INSERT INTO users (login, pwd) VALUES (:login, '');
+
 --! retrieve_user
 SELECT id, login, pwd FROM users WHERE login = :login;
+
+--! list_users
+SELECT 
+  u.login,
+  ARRAY_REMOVE(ARRAY_AGG(ug.group_name), NULL) AS groups
+FROM 
+  users u
+LEFT JOIN 
+  user_groups ug 
+  ON 
+  ug.user_login = u.login
+GROUP BY
+  u.login
+;
 
 --! delete_user
 DELETE FROM users WHERE login = :login;
@@ -31,4 +48,5 @@ INNER JOIN
 WHERE 
   u.login = :login 
   AND
-  p.name = :permission_name; 
+  p.name = :permission_name;
+

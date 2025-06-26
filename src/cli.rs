@@ -56,6 +56,7 @@ impl MainCli {
                             .service(crate::routes::user::delete::delete_route)
                             .service(crate::routes::user::info::info_route)
                             .service(crate::routes::user::authorize::authorize_route)
+                            .service(crate::routes::user::update_pwd::update_pwd_route)
                     })
                     .bind(("127.0.0.1", config.port))?
                     .run()

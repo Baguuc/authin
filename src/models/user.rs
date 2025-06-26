@@ -51,7 +51,7 @@ pub async fn get_user(client: &clorinde::deadpool_postgres::Client, token: Strin
 }
 
 pub async fn sync_users(client: &clorinde::deadpool_postgres::Client, new_users: &Vec<crate::config::UserConfig>) -> Result<()> {
-    use clorinde::queries::{groups::{grant_group, revoke_group}, users::{list_users, insert_user_no_pwd, delete_user}};
+    use clorinde::queries::{groups::{grant_group, revoke_group}, users::{list_users, delete_user}};
     use crate::config::UserConfig as User;
     
     let current_users = list_users()
@@ -61,7 +61,10 @@ pub async fn sync_users(client: &clorinde::deadpool_postgres::Client, new_users:
         .iter()
         .map(|g| User { 
             login: g.login.clone(),
-            groups: g.groups.clone()
+            groups: g.groups.clone(),
+            
+            // this doesn't matter at all in this case
+            initial_pwd: String::new(),
         })
         .collect::<Vec<User>>();
 
@@ -113,9 +116,7 @@ pub async fn sync_users(client: &clorinde::deadpool_postgres::Client, new_users:
         if found { continue; }
         
         // if couldn't be found just add it from scratch
-        insert_user_no_pwd()
-            .bind(client, &user.login)
-            .await?;
+        register(client, &user.login, &user.initial_pwd).await;
 
         for group in &user.groups {
             grant_group()
@@ -127,7 +128,7 @@ pub async fn sync_users(client: &clorinde::deadpool_postgres::Client, new_users:
     return Ok(());
 }
 
-fn hash_password(password: String) -> Result<String> {
+pub fn hash_password(password: String) -> Result<String> {
     use argon2::{Argon2, PasswordHasher, password_hash::{SaltString, rand_core::OsRng}};
     
     let pwd = password.as_bytes();
@@ -188,3 +189,4 @@ fn get_claims(token: String, encoding_key: String) -> Result<Claims> {
 
     return Ok(decoded.claims);
 }
+

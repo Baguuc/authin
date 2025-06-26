@@ -21,6 +21,9 @@ GROUP BY
   u.login
 ;
 
+--! update_user_pwd
+UPDATE users SET pwd = :pwd WHERE login = :login;
+
 --! delete_user
 DELETE FROM users WHERE login = :login;
 

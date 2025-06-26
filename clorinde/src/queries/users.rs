@@ -6,6 +6,11 @@ pub struct InsertUserParams<T1: crate::StringSql, T2: crate::StringSql> {
     pub pwd: T2,
 }
 #[derive(Debug)]
+pub struct UpdateUserPwdParams<T1: crate::StringSql, T2: crate::StringSql> {
+    pub pwd: T1,
+    pub login: T2,
+}
+#[derive(Debug)]
 pub struct RetrieveUserPermissionParams<T1: crate::StringSql, T2: crate::StringSql> {
     pub login: T1,
     pub permission_name: T2,
@@ -342,6 +347,45 @@ impl ListUsersStmt {
                 },
             mapper: |it| ListUsers::from(it),
         }
+    }
+}
+pub fn update_user_pwd() -> UpdateUserPwdStmt {
+    UpdateUserPwdStmt(crate::client::async_::Stmt::new(
+        "UPDATE users SET pwd = $1 WHERE login = $2",
+    ))
+}
+pub struct UpdateUserPwdStmt(crate::client::async_::Stmt);
+impl UpdateUserPwdStmt {
+    pub async fn bind<'c, 'a, 's, C: GenericClient, T1: crate::StringSql, T2: crate::StringSql>(
+        &'s mut self,
+        client: &'c C,
+        pwd: &'a T1,
+        login: &'a T2,
+    ) -> Result<u64, tokio_postgres::Error> {
+        let stmt = self.0.prepare(client).await?;
+        client.execute(stmt, &[pwd, login]).await
+    }
+}
+impl<'a, C: GenericClient + Send + Sync, T1: crate::StringSql, T2: crate::StringSql>
+    crate::client::async_::Params<
+        'a,
+        'a,
+        'a,
+        UpdateUserPwdParams<T1, T2>,
+        std::pin::Pin<
+            Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
+        >,
+        C,
+    > for UpdateUserPwdStmt
+{
+    fn params(
+        &'a mut self,
+        client: &'a C,
+        params: &'a UpdateUserPwdParams<T1, T2>,
+    ) -> std::pin::Pin<
+        Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
+    > {
+        Box::pin(self.bind(client, &params.pwd, &params.login))
     }
 }
 pub fn delete_user() -> DeleteUserStmt {

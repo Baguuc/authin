@@ -7,7 +7,7 @@ pub struct User {
     pub pwd: String
 }
 
-pub async fn register(client: &clorinde::deadpool_postgres::Client, login: &String, password: &String) -> Result<()> { 
+pub async fn register<C: clorinde::client::GenericClient>(client: &C, login: &String, password: &String) -> Result<()> { 
     use clorinde::queries::users::insert_user; 
 
     let pwd = hash_password(password.clone())?;
@@ -50,7 +50,7 @@ pub async fn get_user(client: &clorinde::deadpool_postgres::Client, token: Strin
     return Ok(User { id: user.id, login: user.login, pwd: user.pwd });
 }
 
-pub async fn sync_users(client: &clorinde::deadpool_postgres::Client, new_users: &Vec<crate::config::UserConfig>) -> Result<()> {
+pub async fn sync_users<C: clorinde::client::GenericClient>(client: &C, new_users: &Vec<crate::config::UserConfig>) -> Result<()> {
     use clorinde::queries::{groups::{grant_group, revoke_group}, users::{list_users, delete_user}};
     use crate::config::UserConfig as User;
     
@@ -100,13 +100,13 @@ pub async fn sync_users(client: &clorinde::deadpool_postgres::Client, new_users:
                 for group in &c_user.groups {                     
                     revoke_group()
                         .bind(client, &c_user.login, &group)
-                        .await;
+                        .await?;
                 }
                 
                 for group in &user.groups {                     
                     grant_group()
                         .bind(client, &user.login, &group)
-                        .await;
+                        .await?;
                 }
                 
                 break;
@@ -116,7 +116,7 @@ pub async fn sync_users(client: &clorinde::deadpool_postgres::Client, new_users:
         if found { continue; }
         
         // if couldn't be found just add it from scratch
-        register(client, &user.login, &user.initial_pwd).await;
+        register(client, &user.login, &user.initial_pwd).await?;
 
         for group in &user.groups {
             grant_group()

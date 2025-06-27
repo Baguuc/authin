@@ -6,7 +6,7 @@ pub struct Group {
     pub permissions: Vec<String>
 }
 
-pub async fn sync_groups(client: &clorinde::deadpool_postgres::Client, new_groups: &Vec<Group>) -> Result<()> {
+pub async fn sync_groups<C: clorinde::client::GenericClient>(client: &C, new_groups: &Vec<Group>) -> Result<()> {
     use clorinde::queries::{permissions::{grant_permission, revoke_permission}, groups::{list_groups, insert_group, delete_group}};
 
     let current_groups = list_groups()
@@ -38,7 +38,6 @@ pub async fn sync_groups(client: &clorinde::deadpool_postgres::Client, new_group
     }
 
     for group in new_groups {
-        println!("{:?}", group);
         let mut found = false;
         
         for c_group in &current_groups {
@@ -53,13 +52,13 @@ pub async fn sync_groups(client: &clorinde::deadpool_postgres::Client, new_group
                 for permission in &c_group.permissions {                     
                     revoke_permission()
                         .bind(client, &c_group.name, &permission)
-                        .await;
+                        .await?;
                 }
                 
                 for permission in &group.permissions {                     
                     grant_permission()
                         .bind(client, &group.name, &permission)
-                        .await;
+                        .await?;
                 }
                 
                 break;

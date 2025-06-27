@@ -5,7 +5,7 @@ pub struct Permission {
     pub name: String,
 }
 
-pub async fn sync_permissions(client: &clorinde::deadpool_postgres::Client, new_permissions: &Vec<String>) -> Result<()> {
+pub async fn sync_permissions<C: clorinde::client::GenericClient>(client: &C, new_permissions: &Vec<String>) -> Result<()> {
     use clorinde::queries::permissions::{list_permissions,insert_permission,delete_permission};
 
     let current_permissions = list_permissions()

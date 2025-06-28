@@ -5,15 +5,7 @@ use crate::prelude::*;
 #[command(bin_name = "authin")]
 pub enum MainCli {
     Sync,
-    Run,
-    Grant {
-        object: String,
-        subject: String
-    },
-    Revoke {
-        object: String,
-        subject: String
-    }
+    Run
 }
 
 impl MainCli {
@@ -125,8 +117,6 @@ impl MainCli {
                         .app_data(Data::new(pool))
                         .app_data(Data::new(config.clone()))
                         .service(crate::routes::user::login::login_route)
-                        .service(crate::routes::user::register::register_route)
-                        .service(crate::routes::user::delete::delete_route)
                         .service(crate::routes::user::info::info_route)
                         .service(crate::routes::user::authorize::authorize_route)
                         .service(crate::routes::user::update_pwd::update_pwd_route)
@@ -138,78 +128,6 @@ impl MainCli {
                     Err(_) => {
                         println!("{} Cannot bind server to port {}", "error:".red(), config.port);
                         
-                        std::process::exit(1);
-                    }
-                };
-            },
-            Self::Grant { subject, object } => {
-                use clorinde::queries::groups::grant_group;
-                use futures::executor::block_on;
-                use crate::config::Config;
-                
-                let config = match Config::read(String::from("./config.json")) {
-                    Ok(config) => config,
-                    Err(err) => {
-                        println!("{} Reading config: {}", "error:".red(), err);
-                        std::process::exit(1);
-                    }
-                };
-                let pool = match block_on(create_pool(config.database.clone())) {
-                    Ok(pool) => pool,
-                    Err(err) => {
-                        println!("{} Connecting to the database: {}", "error:".red(), err);
-                        std::process::exit(1);
-                    }
-                };
-                let mut client = match block_on(pool.get()) {
-                    Ok(client) => client,
-                    Err(_) => {
-                        println!("{} Cannot create postgres client from the pool", "error:".red());
-                        std::process::exit(1);
-                    }
-                };
-
-                match block_on(grant_group().bind(&client, &subject, &object)) {
-                    Ok(_) => (),
-                    Err(err) => {
-                        println!("{} {}", "error:".red(), err);
-
-                        std::process::exit(1);
-                    }
-                };
-            },
-            Self::Revoke { subject, object } => {
-                use clorinde::queries::groups::revoke_group;
-                use futures::executor::block_on;
-                use crate::config::Config;
-                
-                let config = match Config::read(String::from("./config.json")) {
-                    Ok(config) => config,
-                    Err(err) => {
-                        println!("{} Reading config: {}", "error:".red(), err);
-                        std::process::exit(1);
-                    }
-                };
-                let pool = match block_on(create_pool(config.database.clone())) {
-                    Ok(pool) => pool,
-                    Err(err) => {
-                        println!("{} Connecting to the database: {}", "error:".red(), err);
-                        std::process::exit(1);
-                    }
-                };
-                let mut client = match block_on(pool.get()) {
-                    Ok(client) => client,
-                    Err(_) => {
-                        println!("{} Cannot create postgres client from the pool", "error:".red());
-                        std::process::exit(1);
-                    }
-                };
-
-                match block_on(revoke_group().bind(&client, &subject, &object)) {
-                    Ok(_) => (),
-                    Err(err) => {
-                        println!("{} {}", "error:".red(), err);
-
                         std::process::exit(1);
                     }
                 };

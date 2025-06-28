@@ -3,9 +3,18 @@ use crate::prelude::*;
 #[derive(clap::Parser)] // requires `derive` feature
 #[command(name = "authin")]
 #[command(bin_name = "authin")]
+#[command(about = "A simple API for managing users and permissions in closed systems", long_about = None)]
 pub enum MainCli {
-    Sync,
-    Run
+    #[command(about = "Run the HTTP server", long_about = None)]
+    Run(Args),
+    #[command(about = "Sync permissions, groups and users data defined in supplied config.json", long_about = None)]
+    Sync(Args),
+}
+
+#[derive(clap::Args, Clone)]
+pub struct Args {
+    #[clap(long, short)]
+    config: Option<String>
 }
 
 impl MainCli {
@@ -13,12 +22,12 @@ impl MainCli {
         use colored::Colorize; 
         
         match self {
-            Self::Sync => {
+            Self::Sync(args) => {
                 use crate::models::{permission::sync_permissions, group::sync_groups, user::sync_users};
                 use futures::executor::block_on;
                 use crate::config::Config;
 
-                let config = match Config::read(String::from("./config.json")) {
+                let config = match Config::read(args.config.unwrap_or(String::from("./authin.json"))) {
                     Ok(config) => config,
                     Err(err) => {
                         println!("{} reading config: {}", "error:".red(), err);
@@ -76,12 +85,12 @@ impl MainCli {
                     }
                 };
             },
-            Self::Run => {
+            Self::Run(args) => {
                 use actix_web::{HttpServer, App, web::Data};
                 use futures::executor::block_on;
                 use crate::config::Config;
                 
-                let config = match Config::read(String::from("./config.json")) {
+                let config = match Config::read(args.clone().config.unwrap_or(String::from("./authin.json"))) {
                     Ok(config) => config,
                     Err(err) => {
                         println!("{} Reading config: {}", "error:".red(), err);
@@ -90,8 +99,8 @@ impl MainCli {
                 };
                 println!("{} Server starting on port {}", "+".green(), config.port.to_string().underline());
                 
-                let bind_result = HttpServer::new(|| {
-                    let config = match Config::read(String::from("./config.json")) {
+                let bind_result = HttpServer::new(move || {
+                    let config = match Config::read(args.clone().config.unwrap_or(String::from("./authin.json"))) {
                         Ok(config) => config,
                         Err(err) => {
                             println!("{} Reading config: {}", "error:".red(), err);
@@ -131,7 +140,8 @@ impl MainCli {
                         std::process::exit(1);
                     }
                 };
-            }
+            },
+            _ => {}
         };
 
         return Ok(());

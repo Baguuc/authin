@@ -1,18 +1,15 @@
 #[actix_web::post("/user")]
 pub async fn login_route(
     body: actix_web::web::Json<RequestBody>,
-    pool: actix_web::web::Data<clorinde::deadpool_postgres::Pool>,
+    client: actix_web::web::Data<sqlx::postgres::PgPool>,
     config: actix_web::web::Data<crate::config::Config>,
 ) -> impl actix_web::Responder {
-    use crate::models::user::login;
     use actix_web::HttpResponse;
+    use crate::models::User;
     
-    let client = match pool.get().await {
-        Ok(client) => client,
-        Err(_) => return HttpResponse::InternalServerError().body("")
-    };
+    let client = client.into_inner();
     
-    let token = match login(&client, &body.login, &body.pwd, config.jwt.encryption_key.clone()).await {
+    let token = match User::login(&body.login, &body.pwd, config.jwt.encryption_key.clone(), &*client).await {
         Ok(token) => token,
         Err(_) => return HttpResponse::Unauthorized().body("")
     };

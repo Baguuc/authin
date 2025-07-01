@@ -13,11 +13,8 @@ pub enum Error {
     Actix(#[from] actix_web::Error),
 
     #[error(transparent)]
-    Query(#[from] clorinde::tokio_postgres::Error),
-
-    #[error(transparent)]
-    CreatePostgresPool(#[from] clorinde::deadpool_postgres::CreatePoolError),
-        
+    Sqlx(#[from] sqlx::Error),
+    
     #[error(transparent)]
     JWT(#[from] jsonwebtoken::errors::Error),
 

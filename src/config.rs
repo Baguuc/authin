@@ -24,7 +24,7 @@ pub struct JWTConfig {
     pub encryption_key: String
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct UserConfig {
     pub login: String,
     pub initial_pwd: String,

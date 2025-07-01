@@ -2,18 +2,14 @@
 pub async fn authorize_route(
     req: actix_web::HttpRequest,
     path: actix_web::web::Path<RequestPath>,
-    pool: actix_web::web::Data<clorinde::deadpool_postgres::Pool>,
+    client: actix_web::web::Data<sqlx::postgres::PgPool>,
     config: actix_web::web::Data<crate::config::Config>,
 ) -> impl actix_web::Responder {
-    use clorinde::queries::users::retrieve_user_permission;
-    use crate::models::user::get_user;
+    use crate::models::User;
     use actix_web::{HttpResponse, http::header::ContentType};
     use serde_json::to_string;
-    
-    let client = match pool.get().await {
-        Ok(client) => client,
-        Err(_) => return HttpResponse::InternalServerError().body(""),
-    };
+
+    let client = client.into_inner();
     
     let headers = req.headers();
     let token = match headers.get("Authorization") {
@@ -21,12 +17,12 @@ pub async fn authorize_route(
         None => return HttpResponse::Unauthorized().body("")
     };
 
-    let user = match get_user(&client, token, config.jwt.encryption_key.clone()).await {
+    let user = match User::from_token(&token, &config.jwt.encryption_key.clone(), &*client).await {
         Ok(user) => user,
         Err(_) => return HttpResponse::BadRequest().body("")
     };
 
-    match retrieve_user_permission().bind(&client, &user.login, &path.permission_name).one().await {
+    match User::check_permission(&user.login, &path.permission_name, &*client).await {
         Ok(_) => return HttpResponse::Ok().body(""),
         Err(_) => return HttpResponse::Unauthorized().body("")
     };

@@ -14,14 +14,6 @@ const MIGRATIONS: [&str; 9] = [
     ",
 
     "
-    CREATE TYPE TUSER AS (
-      id INTEGER,
-      login VARCHAR(32),
-      pwd VARCHAR(80)
-    );
-    ",
-
-    "
     CREATE TABLE IF NOT EXISTS groups (
       name TEXT PRIMARY KEY
     );

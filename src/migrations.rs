@@ -40,7 +40,7 @@ const MIGRATIONS: [&str; 10] = [
 
 pub async fn migrate(client: &sqlx::postgres::PgPool) -> Result<()> {
     use sqlx::query;
-    use crate::error::{print_ok, print_error};
+    use crate::cli::style::{print_ok, print_error};
 
     let mut tx = client.begin().await?;
     

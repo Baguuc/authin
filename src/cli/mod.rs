@@ -1,5 +1,7 @@
 use crate::prelude::*;
 
+pub mod style;
+
 #[derive(clap::Parser)] // requires `derive` feature
 #[command(name = "authin")]
 #[command(bin_name = "authin")]
@@ -36,11 +38,13 @@ async fn run(args: Args) {
     use actix_web::{HttpServer, App, web::Data};
     use futures::executor::block_on;
     use crate::config::Config;
-    use crate::error::print_ok;
-
-    migrate(args.clone()).await;
+    use crate::cli::style::{print_ok,print_header};
+    
+    migrate(args.clone()).await;  
     sync(args.clone()).await;
     
+    print_header("Running web server");
+
     let config = W(Config::read(args.clone().config.unwrap_or(String::from("./authin.json"))))
         .or_print_err();
     
@@ -64,7 +68,7 @@ async fn run(args: Args) {
     let binded_server = match server.bind(("127.0.0.1", config.port.clone())) {
         Ok(server) => server,
         Err(_) => {
-            crate::error::print_error("Cannot bind to port", config.port);
+            crate::cli::style::print_error("Cannot bind to port", config.port);
             
             std::process::exit(1);
         }
@@ -77,8 +81,10 @@ async fn sync(args: Args) {
     use colored::Colorize;
     use crate::config::Config;
     use crate::models::{User,Group,Permission};
-    use crate::error::print_ok;
-
+    use crate::cli::style::{print_ok,print_header};
+    
+    print_header("Syncing configuration");
+    
     let config = W(Config::read(args.config.unwrap_or(String::from("./authin.json"))))
         .or_print_err();
     let pool = W(create_pool(config.database.clone()).await)
@@ -102,7 +108,10 @@ async fn sync(args: Args) {
 async fn migrate(args: Args) {
     use crate::config::Config;
     use crate::migrations::migrate;
-
+    use crate::cli::style::print_header;
+    
+    print_header("Migrating database");
+    
     let config = W(Config::read(args.config.unwrap_or(String::from("./authin.json"))))
         .or_print_err();
     let pool = W(create_pool(config.database.clone()).await)

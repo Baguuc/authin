@@ -29,6 +29,8 @@ pub type Result<T> = std::result::Result<T, crate::error::Error>;
 
 impl<T> crate::prelude::W<Result<T>> {
     pub fn or_print_err(self) -> T {
+        use crate::cli::style::print_error;
+        
         match self.0 {
             Ok(value) => return value,
             Err(err) => {
@@ -47,16 +49,4 @@ impl<T> crate::prelude::W<Result<T>> {
             }
         }
     }
-}
-
-pub fn print_error(msg: impl std::fmt::Display, error: impl std::fmt::Display) {
-    use colored::Colorize; 
-    
-    println!("{} {} {}", "error:".red(), msg, error);
-}
-
-pub fn print_ok(msg: impl std::fmt::Display) {
-    use colored::Colorize;
-
-    println!("{} {}", "ok:".green(), msg);
 }

@@ -9,6 +9,8 @@ pub enum MainCli {
     Run(Args),
     #[command(about = "Sync permissions, groups and users data defined in supplied config.json", long_about = None)]
     Sync(Args),
+    #[command(about = "Run migrations on the database")]
+    Migrate(Args)
 }
 
 #[derive(clap::Args, Clone)]
@@ -123,7 +125,34 @@ impl MainCli {
                     }
                 };
             },
-            _ => {}
+            Self::Migrate(args) => {
+                use futures::executor::block_on;
+                use crate::config::Config;
+                use crate::migrations::migrate;
+
+                let config = match Config::read(args.clone().config.unwrap_or(String::from("./authin.json"))) {
+                    Ok(config) => config,
+                    Err(err) => {
+                        println!("{} Reading config: {}", "error:".red(), err);
+                        std::process::exit(1);
+                    }
+                };
+                let pool = match block_on(create_pool(config.database.clone())) {
+                    Ok(pool) => pool,
+                    Err(err) => {
+                        println!("{} Connecting to the database: {}", "error:".red(), err);
+                        std::process::exit(1);
+                    }
+                };
+
+                match block_on(migrate(&pool)) {
+                    Ok(_) => (),
+                    Err(err) => {
+                        println!("{} Running migrations: {}", "error".red(), err);
+                        std::process::exit(1);
+                    }
+                };
+            }
         };
 
         return Ok(());

@@ -4,6 +4,7 @@ pub mod models;
 pub mod routes;
 pub mod config;
 pub mod cli;
+pub mod migrations;
 
 use crate::prelude::*;
 

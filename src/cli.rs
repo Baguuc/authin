@@ -21,7 +21,7 @@ pub struct Args {
 
 impl MainCli {
     pub fn execute(self) -> Result<()> {
-        use colored::Colorize; 
+        use colored::Colorize;
         
         match self {
             Self::Sync(args) => {
@@ -29,50 +29,22 @@ impl MainCli {
                 use crate::config::Config;
                 use crate::models::{User,Group,Permission};
 
-                let config = match Config::read(args.config.unwrap_or(String::from("./authin.json"))) {
-                    Ok(config) => config,
-                    Err(err) => {
-                        println!("{} reading config: {}", "error:".red(), err);
-                        std::process::exit(1);
-                    }
-                };
-                let client = match block_on(create_pool(config.database.clone())) {
-                    Ok(pool) => pool,
-                    Err(err) => {
-                        println!("{} Error connecting to the database: {}", "error:".red(), err);
-                        std::process::exit(1);
-                    }
-                };
+                let config = W(Config::read(args.config.unwrap_or(String::from("./authin.json"))))
+                    .or_print_err();
+                let pool = W(block_on(create_pool(config.database.clone())))
+                    .or_print_err();
 
                 println!("{} Syncing permissions...", "+".green());
-                match block_on(Permission::sync(&config.permissions, &client)) {
-                    Ok(_) => (),
-                    Err(err) => {
-                        println!("{} {}", "error:".red(), err);
-
-                        std::process::exit(1);
-                    }
-                };
+                W(block_on(Permission::sync(&config.permissions, &pool)))
+                    .or_print_err();
                 
                 println!("{} Syncing groups...", "+".green());
-                match block_on(Group::sync(&config.groups, &client)) {
-                    Ok(_) => (),
-                    Err(err) => {
-                        println!("{} {}", "error:".red(), err);
-                        
-                        std::process::exit(1);
-                    }
-                };
+                W(block_on(Group::sync(&config.groups, &pool)))
+                    .or_print_err();
                 
                 println!("{} Syncing users...", "+".green());
-                match block_on(User::sync(&config.users, &client)) {
-                    Ok(_) => (),
-                    Err(err) => {
-                        println!("{} {}", "error:".red(), err);
-                        
-                        std::process::exit(1);
-                    }
-                }; 
+                W(block_on(User::sync(&config.users, &pool)))
+                    .or_print_err();
                 
                 println!("{} Done.", "+".green());
             },
@@ -81,30 +53,16 @@ impl MainCli {
                 use futures::executor::block_on;
                 use crate::config::Config;
                 
-                let config = match Config::read(args.clone().config.unwrap_or(String::from("./authin.json"))) {
-                    Ok(config) => config,
-                    Err(err) => {
-                        println!("{} Reading config: {}", "error:".red(), err);
-                        std::process::exit(1);
-                    }
-                };
+                let config = W(Config::read(args.clone().config.unwrap_or(String::from("./authin.json"))))
+                    .or_print_err();
+                
                 println!("{} Server starting on port {}", "+".green(), config.port.to_string().underline());
                 
-                let bind_result = HttpServer::new(move || {
-                    let config = match Config::read(args.clone().config.unwrap_or(String::from("./authin.json"))) {
-                        Ok(config) => config,
-                        Err(err) => {
-                            println!("{} Reading config: {}", "error:".red(), err);
-                            std::process::exit(1);
-                        }
-                    };
-                    let pool = match block_on(create_pool(config.database.clone())) {
-                        Ok(pool) => pool,
-                        Err(err) => {
-                            println!("{} Connecting to the database: {}", "error:".red(), err);
-                            std::process::exit(1);
-                        }
-                    };
+                let server = HttpServer::new(move || {
+                    let config = W(Config::read(args.clone().config.unwrap_or(String::from("./authin.json"))))
+                        .or_print_err();
+                    let pool = W(block_on(create_pool(config.database.clone())))
+                        .or_print_err();
                     
                     App::new()
                         .app_data(Data::new(pool))
@@ -113,45 +71,31 @@ impl MainCli {
                         .service(crate::routes::user::info::info_route)
                         .service(crate::routes::user::authorize::authorize_route)
                         .service(crate::routes::user::update_pwd::update_pwd_route)
-                })
-                .bind(("127.0.0.1", config.port.clone()));
+                });
 
-                match bind_result {
-                    Ok(server) => block_on(server.run()),
+                let binded_server = match server.bind(("127.0.0.1", config.port.clone())) {
+                    Ok(server) => server,
                     Err(_) => {
-                        println!("{} Cannot bind server to port {}", "error:".red(), config.port);
+                        crate::error::print_error("Cannot bind to port", config.port);
                         
                         std::process::exit(1);
                     }
                 };
+
+                block_on(binded_server.run());
             },
             Self::Migrate(args) => {
                 use futures::executor::block_on;
                 use crate::config::Config;
                 use crate::migrations::migrate;
 
-                let config = match Config::read(args.clone().config.unwrap_or(String::from("./authin.json"))) {
-                    Ok(config) => config,
-                    Err(err) => {
-                        println!("{} Reading config: {}", "error:".red(), err);
-                        std::process::exit(1);
-                    }
-                };
-                let pool = match block_on(create_pool(config.database.clone())) {
-                    Ok(pool) => pool,
-                    Err(err) => {
-                        println!("{} Connecting to the database: {}", "error:".red(), err);
-                        std::process::exit(1);
-                    }
-                };
-
-                match block_on(migrate(&pool)) {
-                    Ok(_) => (),
-                    Err(err) => {
-                        println!("{} Running migrations: {}", "error".red(), err);
-                        std::process::exit(1);
-                    }
-                };
+                let config = W(Config::read(args.config.unwrap_or(String::from("./authin.json"))))
+                    .or_print_err();
+                let pool = W(block_on(create_pool(config.database.clone())))
+                    .or_print_err();
+                
+                W(block_on(migrate(&pool)))
+                    .or_print_err();
             }
         };
 

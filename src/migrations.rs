@@ -55,11 +55,21 @@ const MIGRATIONS: [&str; 9] = [
 
 pub async fn migrate(client: &sqlx::postgres::PgPool) -> Result<()> {
     use sqlx::query;
+    use crate::error::{print_ok, print_error};
 
     let mut tx = client.begin().await?;
     
     for sql in MIGRATIONS {
-        let _ = query(sql).execute(&mut *tx).await?;    
+        match query(sql).execute(&mut *tx).await {
+            Ok(_) => {
+                print_ok(format!("executed migration command: {}", sql));
+            },
+            Err(err) => {
+                print_error(format!("\nMigration command failed.\nSQL: {}\n", sql), err);
+                
+                std::process::exit(1);
+            }
+        }; 
     }
 
     let _ = tx.commit().await?;

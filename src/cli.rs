@@ -37,6 +37,9 @@ async fn run(args: Args) {
     use futures::executor::block_on;
     use crate::config::Config;
     use crate::error::print_ok;
+
+    migrate(args.clone()).await;
+    sync(args.clone()).await;
     
     let config = W(Config::read(args.clone().config.unwrap_or(String::from("./authin.json"))))
         .or_print_err();

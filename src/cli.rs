@@ -20,87 +20,93 @@ pub struct Args {
 }
 
 impl MainCli {
-    pub fn execute(self) -> Result<()> {
-        use colored::Colorize;
-        
+    pub fn execute(self) {
+        use futures::executor::block_on;
+
         match self {
-            Self::Sync(args) => {
-                use futures::executor::block_on;
-                use crate::config::Config;
-                use crate::models::{User,Group,Permission};
-
-                let config = W(Config::read(args.config.unwrap_or(String::from("./authin.json"))))
-                    .or_print_err();
-                let pool = W(block_on(create_pool(config.database.clone())))
-                    .or_print_err();
-
-                println!("{} Syncing permissions...", "+".green());
-                W(block_on(Permission::sync(&config.permissions, &pool)))
-                    .or_print_err();
-                
-                println!("{} Syncing groups...", "+".green());
-                W(block_on(Group::sync(&config.groups, &pool)))
-                    .or_print_err();
-                
-                println!("{} Syncing users...", "+".green());
-                W(block_on(User::sync(&config.users, &pool)))
-                    .or_print_err();
-                
-                println!("{} Done.", "+".green());
-            },
-            Self::Run(args) => {
-                use actix_web::{HttpServer, App, web::Data};
-                use futures::executor::block_on;
-                use crate::config::Config;
-                
-                let config = W(Config::read(args.clone().config.unwrap_or(String::from("./authin.json"))))
-                    .or_print_err();
-                
-                println!("{} Server starting on port {}", "+".green(), config.port.to_string().underline());
-                
-                let server = HttpServer::new(move || {
-                    let config = W(Config::read(args.clone().config.unwrap_or(String::from("./authin.json"))))
-                        .or_print_err();
-                    let pool = W(block_on(create_pool(config.database.clone())))
-                        .or_print_err();
-                    
-                    App::new()
-                        .app_data(Data::new(pool))
-                        .app_data(Data::new(config.clone()))
-                        .service(crate::routes::user::login::login_route)
-                        .service(crate::routes::user::info::info_route)
-                        .service(crate::routes::user::authorize::authorize_route)
-                        .service(crate::routes::user::update_pwd::update_pwd_route)
-                });
-
-                let binded_server = match server.bind(("127.0.0.1", config.port.clone())) {
-                    Ok(server) => server,
-                    Err(_) => {
-                        crate::error::print_error("Cannot bind to port", config.port);
-                        
-                        std::process::exit(1);
-                    }
-                };
-
-                block_on(binded_server.run());
-            },
-            Self::Migrate(args) => {
-                use futures::executor::block_on;
-                use crate::config::Config;
-                use crate::migrations::migrate;
-
-                let config = W(Config::read(args.config.unwrap_or(String::from("./authin.json"))))
-                    .or_print_err();
-                let pool = W(block_on(create_pool(config.database.clone())))
-                    .or_print_err();
-                
-                W(block_on(migrate(&pool)))
-                    .or_print_err();
-            }
+            Self::Run(args) => { block_on(run(args)); },
+            Self::Sync(args) => { block_on(sync(args)); },
+            Self::Migrate(args) => { block_on(migrate(args)); }
         };
-
-        return Ok(());
     }
+}
+
+async fn run(args: Args) {
+    use colored::Colorize;
+    use actix_web::{HttpServer, App, web::Data};
+    use futures::executor::block_on;
+    use crate::config::Config;
+    use crate::error::print_ok;
+    
+    let config = W(Config::read(args.clone().config.unwrap_or(String::from("./authin.json"))))
+        .or_print_err();
+    
+    print_ok(format!("Server starting on port {}", config.port.to_string().underline()));
+    
+    let server = HttpServer::new(move || {
+        let config = W(Config::read(args.clone().config.unwrap_or(String::from("./authin.json"))))
+            .or_print_err();
+        let pool = W(block_on(create_pool(config.database.clone())))
+            .or_print_err();
+        
+        App::new()
+            .app_data(Data::new(pool))
+            .app_data(Data::new(config.clone()))
+            .service(crate::routes::user::login::login_route)
+            .service(crate::routes::user::info::info_route)
+            .service(crate::routes::user::authorize::authorize_route)
+            .service(crate::routes::user::update_pwd::update_pwd_route)
+    });
+
+    let binded_server = match server.bind(("127.0.0.1", config.port.clone())) {
+        Ok(server) => server,
+        Err(_) => {
+            crate::error::print_error("Cannot bind to port", config.port);
+            
+            std::process::exit(1);
+        }
+    };
+
+    binded_server.run().await;
+}
+
+async fn sync(args: Args) {
+    use colored::Colorize;
+    use crate::config::Config;
+    use crate::models::{User,Group,Permission};
+    use crate::error::print_ok;
+
+    let config = W(Config::read(args.config.unwrap_or(String::from("./authin.json"))))
+        .or_print_err();
+    let pool = W(create_pool(config.database.clone()).await)
+        .or_print_err();
+
+    print_ok("Syncing permissions...");
+    W(Permission::sync(&config.permissions, &pool).await)
+        .or_print_err();
+    
+    print_ok("Syncing groups...");
+    W(Group::sync(&config.groups, &pool).await)
+        .or_print_err();
+    
+    print_ok("Syncing users...");
+    W(User::sync(&config.users, &pool).await)
+        .or_print_err();
+    
+    print_ok("Done.");
+}
+
+async fn migrate(args: Args) {
+    use crate::config::Config;
+    use crate::migrations::migrate;
+
+    let config = W(Config::read(args.config.unwrap_or(String::from("./authin.json"))))
+        .or_print_err();
+    let pool = W(create_pool(config.database.clone()).await)
+        .or_print_err();
+    
+    W(migrate(&pool).await)
+        .or_print_err();
 }
 
 async fn create_pool(config: crate::config::DatabaseConfig) -> Result<sqlx::postgres::PgPool> {

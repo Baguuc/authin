@@ -65,7 +65,7 @@ async fn run(args: Args) {
             .service(crate::routes::user::update_pwd::update_pwd_route)
     });
 
-    let binded_server = match server.bind(("127.0.0.1", config.port.clone())) {
+    let binded_server = match server.bind(("0.0.0.0", config.port.clone())) {
         Ok(server) => server,
         Err(_) => {
             crate::cli::style::print_error("Cannot bind to port", config.port);

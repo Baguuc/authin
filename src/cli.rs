@@ -1,7 +1,5 @@
 use crate::prelude::*;
 
-pub mod style;
-
 #[derive(clap::Parser)] // requires `derive` feature
 #[command(name = "authin")]
 #[command(bin_name = "authin")]
@@ -37,18 +35,20 @@ async fn run(args: Args) {
     use colored::Colorize;
     use actix_web::{HttpServer, App, web::Data};
     use futures::executor::block_on;
+    use clin::components::{success, error, header};
     use crate::config::Config;
-    use crate::cli::style::{print_ok,print_header};
     
-    migrate(args.clone()).await;  
+    migrate(args.clone()).await;
+    println!("");
     sync(args.clone()).await;
+    println!("");
     
-    print_header("Running web server");
+    header("Running web server");
 
     let config = W(Config::read(args.clone().config.unwrap_or(String::from("./authin.json"))))
         .or_print_err();
     
-    print_ok(format!("Server starting on port {}", config.port.to_string().underline()));
+    success(format!("Server starting on port {}", config.port.to_string().underline()));
     
     let server = HttpServer::new(move || {
         let config = W(Config::read(args.clone().config.unwrap_or(String::from("./authin.json"))))
@@ -68,7 +68,7 @@ async fn run(args: Args) {
     let binded_server = match server.bind(("127.0.0.1", config.port.clone())) {
         Ok(server) => server,
         Err(_) => {
-            crate::cli::style::print_error("Cannot bind to port", config.port);
+            error("Cannot bind to port", config.port);
             
             std::process::exit(1);
         }
@@ -78,44 +78,46 @@ async fn run(args: Args) {
 }
 
 async fn sync(args: Args) {
-    use colored::Colorize;
+    use clin::components::{progress_bar, header};
     use crate::config::Config;
     use crate::models::{User,Group,Permission};
-    use crate::cli::style::{print_ok,print_header};
-    
-    print_header("Syncing configuration");
     
     let config = W(Config::read(args.config.unwrap_or(String::from("./authin.json"))))
         .or_print_err();
     let pool = W(create_pool(config.database.clone()).await)
         .or_print_err();
+    
+    header("Syncing configuration");
+        
+    progress_bar(30, 0);
 
-    print_ok("Syncing permissions...");
     W(Permission::sync(&config.permissions, &pool).await)
         .or_print_err();
     
-    print_ok("Syncing groups...");
+    progress_bar(30, 10);
+    
     W(Group::sync(&config.groups, &pool).await)
         .or_print_err();
     
-    print_ok("Syncing users...");
+    progress_bar(30, 20);
+    
     W(User::sync(&config.users, &pool).await)
         .or_print_err();
     
-    print_ok("Done.");
+    progress_bar(30, 30);
 }
 
 async fn migrate(args: Args) {
+    use clin::components::header;
     use crate::config::Config;
     use crate::migrations::migrate;
-    use crate::cli::style::print_header;
-    
-    print_header("Migrating database");
     
     let config = W(Config::read(args.config.unwrap_or(String::from("./authin.json"))))
         .or_print_err();
     let pool = W(create_pool(config.database.clone()).await)
         .or_print_err();
+     
+    header("Migrating database");
     
     W(migrate(&pool).await)
         .or_print_err();

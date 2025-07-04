@@ -15,4 +15,5 @@ chrono = "0.4.41"
 argon2 = { version = "0.5.3", features = ["std"] }
 futures = "0.3.31"
 clap = { version = "4.5.40", features = ["derive"] }
+clin = { git = "https://github.com/Baguuc/clin" }
 colored = "3.0.0"

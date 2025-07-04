@@ -324,6 +324,7 @@ dependencies = [
  "argon2",
  "chrono",
  "clap",
+ "clin",
  "colored",
  "futures",
  "jsonwebtoken",
@@ -512,6 +513,14 @@ name = "clap_lex"
 version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b94f61472cee1439c0b966b47e3aca9ae07e45d070759512cd390ea2bebc6675"
+
+[[package]]
+name = "clin"
+version = "0.1.0"
+source = "git+https://github.com/Baguuc/clin#d1d1859348b4d8749dfff58d81ba1d11d52359de"
+dependencies = [
+ "colored",
+]
 
 [[package]]
 name = "colorchoice"
